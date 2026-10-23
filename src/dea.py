@@ -256,14 +256,19 @@ def run_dea(X: np.ndarray, Y: np.ndarray, model: str = "all",
         out["status_ccr_p2"] = [r[3] for r in p2]
         out["lambda"] = lam                               # lambda is unit-free
 
-        # Strong efficiency is decided on the rescaled slacks, so that one
-        # tolerance applies to dollars and FTE alike.
-        max_slack = np.nanmax(np.hstack([s_in, s_out]), axis=1, initial=0.0)
+        # Strong efficiency is decided on slacks relative to the column
+        # means, so that one tolerance applies to dollars and FTE alike and
+        # the classification does not depend on whether the LPs were solved
+        # on rescaled data (x_ref is exactly 1 when they were).
+        x_ref = X.mean(axis=0) / x_mean
+        y_ref = Y.mean(axis=0) / y_mean
+        rel_in, rel_out = s_in / x_ref, s_out / y_ref
+        max_slack = np.nanmax(np.hstack([rel_in, rel_out]), axis=1, initial=0.0)
 
         # Slacks below the tolerance are solver noise (e.g. -0.0 or 1e-12):
         # set them to exactly 0, then convert back to original units.
-        s_in = np.where(s_in <= EFF_TOL, 0.0, s_in)
-        s_out = np.where(s_out <= EFF_TOL, 0.0, s_out)
+        s_in = np.where(rel_in <= EFF_TOL, 0.0, s_in)
+        s_out = np.where(rel_out <= EFF_TOL, 0.0, s_out)
         out["slack_in"] = s_in * x_mean
         out["slack_out"] = s_out * y_mean
         efficient = out["theta_ccr"] >= 1.0 - EFF_TOL
@@ -555,13 +560,88 @@ def comparison_section(tbl: pd.DataFrame, other_path: Path) -> list[str]:
                        ("peer_count", "Top 5 most frequent peers")):
         L += [f"### {label}", "", f"- this run: " + "; ".join(top(tbl, col)),
               f"- {other_path.name}: " + "; ".join(top(other, col)), ""]
-    both = set(tbl.leaid) & set(other.leaid)
-    eff_other = other[other.theta_ccr >= 1 - EFF_TOL].leaid
-    still = tbl[tbl.leaid.isin(eff_other) & (tbl.theta_ccr >= 1 - EFF_TOL)]
-    gone = sorted(set(eff_other) - set(tbl.leaid))
-    L += [f"- districts in both files: {len(both):,}; CCR-efficient in "
-          f"{other_path.name}: {len(eff_other)}, of which still efficient here: "
-          f"{len(still)}, no longer in the sample: {len(gone)}", ""]
+    L += efficiency_change_section(tbl, other, other_path.name)
+    return L
+
+
+def _names(frame: pd.DataFrame, ids) -> str:
+    rows = frame[frame.leaid.isin(ids)].sort_values("district_name")
+    return "; ".join(f"{r.district_name} ({r.state}, {r.leaid})"
+                     for r in rows.itertuples(index=False)) or "none"
+
+
+def efficiency_change_section(tbl: pd.DataFrame, other: pd.DataFrame,
+                              other_name: str) -> list[str]:
+    """Which efficient units left or entered, how the units that used a
+    departed peer moved, and the agreement of the scores on common units."""
+    eff_now = set(tbl.leaid[tbl.theta_ccr >= 1 - EFF_TOL])
+    eff_old = set(other.leaid[other.theta_ccr >= 1 - EFF_TOL])
+    now_ids, old_ids = set(tbl.leaid), set(other.leaid)
+    left_sample = eff_old - now_ids                # efficient before, excluded now
+    lost = (eff_old & now_ids) - eff_now           # still in sample, no longer efficient
+    entered = eff_now - eff_old
+    L = ["### Efficient units", "",
+         f"- in both samples: {len(now_ids & old_ids):,}; only in {other_name}: "
+         f"{len(old_ids - now_ids):,}; only in this run: {len(now_ids - old_ids):,}",
+         f"- CCR-efficient in {other_name}: {len(eff_old)}; in this run: {len(eff_now)}",
+         f"- efficient before and no longer in the sample ({len(left_sample)}): "
+         + _names(other, left_sample),
+         f"- efficient before, still in the sample, no longer efficient ({len(lost)}): "
+         + _names(tbl, lost),
+         f"- newly efficient ({len(entered)}): " + _names(tbl, entered), ""]
+
+    # Units whose old reference set contained a peer that has left the sample.
+    common = tbl.merge(other, on="leaid", suffixes=("", "_old"))
+    common["d_theta"] = common.theta_ccr - common.theta_ccr_old
+    if "peers_old" in common and len(left_sample):
+        peer_sets = common.peers_old.map(lambda j: set(json.loads(j)) if isinstance(j, str) else set())
+        any_departed = peer_sets.map(lambda ps: bool(ps & left_sample))
+        L += ["### Units whose previous reference set included a departed peer", "",
+              "| departed peer | units that used it | median theta before | median theta now | "
+              "median change | mean change | max change | share with higher theta |",
+              "|---|---|---|---|---|---|---|---|"]
+        groups = [(pid, peer_sets.map(lambda ps, pid=pid: pid in ps)) for pid in sorted(left_sample)]
+        groups.append(("any departed peer", any_departed))
+        groups.append(("no departed peer", ~any_departed))
+        for label, mask in groups:
+            sub = common[mask]
+            if label in left_sample:
+                r = other[other.leaid == label].iloc[0]
+                label = f"{r.district_name} ({r.state})"
+            if not len(sub):
+                L.append(f"| {label} | 0 | | | | | | |")
+                continue
+            L.append(f"| {label} | {len(sub):,} | {sub.theta_ccr_old.median():.4f} | "
+                     f"{sub.theta_ccr.median():.4f} | {sub.d_theta.median():+.4f} | "
+                     f"{sub.d_theta.mean():+.4f} | {sub.d_theta.max():+.4f} | "
+                     f"{(sub.d_theta > EFF_TOL).mean():.1%} |")
+        L.append("")
+
+    # Agreement on the common units and headline statistics of both runs.
+    def stats(t):
+        return {"n": f"{len(t):,}",
+                "median theta_CCR": f"{t.theta_ccr.median():.4f}",
+                "min theta_CCR": f"{t.theta_ccr.min():.4f}",
+                "median theta_BCC": f"{t.theta_bcc.median():.4f}" if "theta_bcc" in t else "nan",
+                "Spearman CCR vs BCC": f"{t.theta_ccr.corr(t.theta_bcc, method='spearman'):.4f}"
+                                       if "theta_bcc" in t else "nan",
+                "median scale efficiency": f"{t.scale_eff.median():.4f}" if "scale_eff" in t else "nan"}
+    a, b = stats(tbl), stats(other)
+    L += ["### Headline statistics", "",
+          _md_table(pd.DataFrame({"measure": list(a), "this run": list(a.values()),
+                                  other_name: list(b.values())})), "",
+          f"### Agreement on the {len(common):,} common units", "",
+          f"- Spearman theta_CCR this run vs {other_name}: "
+          f"{common.theta_ccr.corr(common.theta_ccr_old, method='spearman'):.4f}; "
+          f"Pearson {common.theta_ccr.corr(common.theta_ccr_old):.4f}"]
+    if "theta_bcc_old" in common:
+        L.append(f"- Spearman theta_BCC: "
+                 f"{common.theta_bcc.corr(common.theta_bcc_old, method='spearman'):.4f}")
+    L += [f"- change in theta_CCR (this run minus {other_name}): median "
+          f"{common.d_theta.median():+.4f}, mean {common.d_theta.mean():+.4f}, "
+          f"p95 {common.d_theta.quantile(0.95):+.4f}, max {common.d_theta.max():+.4f}; "
+          f"units with a lower theta: {int((common.d_theta < -EFF_TOL).sum())} "
+          "(removing units cannot lower a CCR score; any such case is solver noise)", ""]
     return L
 
 

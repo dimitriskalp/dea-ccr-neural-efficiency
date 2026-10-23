@@ -21,8 +21,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from build_dataset import (DQ_RATIOS, DQ_THRESHOLD, MAD_TO_SD,  # noqa: E402
-                           UNSCREENED_FILE, data_quality_screen)
+from build_dataset import (DQ_RATIOS, DQ_THRESHOLD, EXCLUDED_STATES,  # noqa: E402
+                           MAD_TO_SD, UNSCREENED_FILE, data_quality_screen)
 
 # The data-quality figures describe the screen, so they are drawn from the
 # sample BEFORE the state rule and the screen were applied.
@@ -296,11 +296,14 @@ def fig_state_other_staff_ratio(df: pd.DataFrame, out_dir: Path = FIG_DIR
 def fig_enrollment_ratio_histograms(df: pd.DataFrame, out_dir: Path = FIG_DIR
                                     ) -> list[Path]:
     """Two panels: histogram of ln(students / cov_enrl_g38) for districts
-    that offer any of grades 9-12 and for K-8-only districts, each with its
-    own median and +/- DQ_THRESHOLD robust SD lines. Drawn from the current
-    main dataset (the screen is evaluated on it), not the unscreened one."""
+    that offer any of grades 9-12 and for K-8-only districts (variant B
+    grouping, as in the build), each with its own median and
+    +/- DQ_THRESHOLD robust SD lines. Drawn from the sample the screen is
+    evaluated on in the build: after the state rule and the data-quality
+    screen, before the screen itself (see main)."""
     from screens import enrollment_consistency_screen, offers_high_school
-    ec = enrollment_consistency_screen(df, offers_high_school(df.leaid))
+    hs = offers_high_school(df.leaid, df.district_name, refine=True)
+    ec = enrollment_consistency_screen(df, hs)
 
     fig, axes = plt.subplots(1, 2, figsize=(TEXT_WIDTH_IN, 2.5), sharey=True,
                              sharex=True)
@@ -333,15 +336,22 @@ def fig_enrollment_ratio_histograms(df: pd.DataFrame, out_dir: Path = FIG_DIR
 
 ALL_FIGURES = [fig_log_ratio_histograms, fig_students_vs_teachers,
                fig_state_other_staff_ratio]
-MAIN_DATA_FIGURES = [fig_enrollment_ratio_histograms]   # use the main dataset
+POST_DQ_FIGURES = [fig_enrollment_ratio_histograms]   # sample after state rule + DQ
+
+
+def post_dq_sample(df: pd.DataFrame) -> pd.DataFrame:
+    """The unscreened sample after the state rule and the data-quality
+    screen, i.e. the sample the later screens are evaluated on in the build.
+    Rebuilt here because the main dataset has already had them applied."""
+    df = df[~df.state.isin(EXCLUDED_STATES)].reset_index(drop=True)
+    dq = data_quality_screen(df, DQ_THRESHOLD)
+    return df[~dq.dq_flag].reset_index(drop=True)
 
 
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data", type=Path, default=DATA_FILE,
                    help="unscreened sample for the data-quality figures")
-    p.add_argument("--main-data", type=Path,
-                   default=Path("data/processed/dea_districts_2019.csv"))
     p.add_argument("--out", type=Path, default=FIG_DIR)
     args = p.parse_args(argv)
 
@@ -350,9 +360,10 @@ def main(argv: list[str] | None = None) -> None:
     for func in ALL_FIGURES:
         for path in func(df, args.out):
             print(f"wrote {path}")
-    main_df = pd.read_csv(args.main_data, dtype={"leaid": str})
-    for func in MAIN_DATA_FIGURES:
-        for path in func(main_df, args.out):
+    post_dq = post_dq_sample(df)
+    print(f"post-data-quality sample: {len(post_dq):,} districts")
+    for func in POST_DQ_FIGURES:
+        for path in func(post_dq, args.out):
             print(f"wrote {path}")
 
 
