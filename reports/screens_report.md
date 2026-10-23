@@ -331,7 +331,268 @@ Sample: 10,849 districts (current main dataset). Threshold: |robust z| > 5. Noth
 | 0619620 | Keyes Union | CA | offers 9-12 | 1,105.00 | 653.00 | 1.69 | -5.06 |
 | 2306000 | Glenburn Public Schools | ME | offers 9-12 | 510.00 | 301.00 | 1.69 | -5.03 |
 
-## Overlap
+## Overlap of screens 1 and 2
 
 - flagged by both screens: 1
 - flagged by either: 217
+
+## 3. Virtual-school share (CCD School Characteristics, VIRTUAL)
+
+School-level membership: 99,533 schools in the Membership file, 99,236 with a reported total; cached in data\interim\school_membership_1819.csv. Characteristics file: 99,911 schools.
+
+VIRTUAL categories, all schools with a reported total vs schools of the sample districts:
+
+| VIRTUAL | schools (all) | members (all) | schools (sample districts) | members (sample districts) |
+|---|---|---|---|---|
+| NOTVIRTUAL | 90,557 | 46,082,166 | 70,352 | 36,972,237 |
+| SUPPVIRTUAL | 7,497 | 4,236,824 | 6,083 | 3,358,843 |
+| FULLVIRTUAL | 673 | 289,624 | 462 | 75,467 |
+| FACEVIRTUAL | 386 | 126,735 | 228 | 34,733 |
+| MISSING | 75 | 248 | 10 | 248 |
+| Not reported | 48 | 15,495 | 16 | 3,948 |
+
+Reconciliation of the denominator with F-33 fall membership (V33):
+- districts with CCD school membership: 10,847 of 10,849
+- ln(CCD members / V33): median +0.0000, p05 -0.015, p95 +0.000; |ln ratio| > 0.1 in 89 districts
+- districts with any membership in schools of unknown virtual status: 9
+
+### Andover, KS
+
+- CCD school membership 8,825 (V33 8,825); fully virtual 3,268 in 1 school(s) (share 37.0 %); fully or primarily virtual share 37.0 %
+
+| SCH_NAME | STUDENT_COUNT | VIRTUAL |
+|---|---|---|
+| Andover eCademy | 3,268.00 | FULLVIRTUAL |
+| Andover High | 829.00 | NOTVIRTUAL |
+| Andover Central High School | 813.00 | NOTVIRTUAL |
+| Andover Middle School | 730.00 | NOTVIRTUAL |
+| Andover Central Middle School | 626.00 | NOTVIRTUAL |
+| Robert M. Martin Elementary | 544.00 | NOTVIRTUAL |
+| Wheatland Elementary | 453.00 | NOTVIRTUAL |
+| Cottonwood Elementary | 436.00 | NOTVIRTUAL |
+| Sunflower Elementary School | 417.00 | NOTVIRTUAL |
+| Prairie Creek Elementary | 404.00 | NOTVIRTUAL |
+| Meadowlark Elementary | 305.00 | NOTVIRTUAL |
+
+### Distribution of the virtual-enrollment share
+
+**fully virtual (FULLVIRTUAL)**
+
+- districts with any: 258 of 10,847 (2.4 %); zero: 10,589
+- among those with any: median 1.0 %, p75 4.6 %, p90 22.6 %, max 100.0 %
+- Andover: 37.0 %, rank 18 of 258
+
+| share | districts |
+|---|---|
+| (0, 1 %) | 131 |
+| [1, 5 %) | 68 |
+| [5, 10 %) | 20 |
+| [10, 20 %) | 12 |
+| [20, 50 %) | 18 |
+| [50, 100 %] | 9 |
+
+**fully or primarily virtual (FULLVIRTUAL + FACEVIRTUAL)**
+
+- districts with any: 438 of 10,847 (4.0 %); zero: 10,409
+- among those with any: median 1.2 %, p75 4.0 %, p90 22.1 %, max 100.0 %
+- Andover: 37.0 %, rank 21 of 438
+
+| share | districts |
+|---|---|
+| (0, 1 %) | 202 |
+| [1, 5 %) | 143 |
+| [5, 10 %) | 34 |
+| [10, 20 %) | 14 |
+| [20, 50 %) | 33 |
+| [50, 100 %] | 12 |
+
+### Thresholds
+
+A district is excluded when its share is >= the threshold. 'Final sample' applies, on the current 10,849, the temporal screen (33), the enrollment screen variant B high side only (107; union of the two 140) and the virtual rule.
+
+| definition | threshold | excluded | CCR-efficient excluded | remaining (rule alone) | final sample (all rules) |
+|---|---|---|---|---|---|
+| fully virtual (FULLVIRTUAL) | 5 % | 59 | Andover | 10,790 | 10,660 |
+| fully virtual (FULLVIRTUAL) | 10 % | 39 | Andover | 10,810 | 10,679 |
+| fully virtual (FULLVIRTUAL) | 20 % | 27 | Andover | 10,822 | 10,689 |
+| fully or primarily virtual (FULLVIRTUAL + FACEVIRTUAL) | 5 % | 93 | Andover | 10,756 | 10,627 |
+| fully or primarily virtual (FULLVIRTUAL + FACEVIRTUAL) | 10 % | 59 | Andover | 10,790 | 10,660 |
+| fully or primarily virtual (FULLVIRTUAL + FACEVIRTUAL) | 20 % | 45 | Andover | 10,804 | 10,673 |
+
+### Districts with a fully-or-primarily virtual share >= 5 % (93)
+
+Shares in percent.
+
+| leaid | district_name | state | students | members_full | members_full_prim | share_full | share_full_prim | n_full | n_full_prim | efficient |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0617620 | Hornbrook Elementary | CA | 45.00 | 45.00 | 45.00 | 100.00 | 100.00 | 1.00 | 1.00 |  |
+| 0632520 | Richmond Elementary | CA | 226.00 | 0.00 | 226.00 | 0.00 | 100.00 | 0.00 | 1.00 |  |
+| 2500556 | TEC Connections Academy Commonwealth Virtual School District | MA | 2,143.00 | 2,143.00 | 2,143.00 | 100.00 | 100.00 | 1.00 | 1.00 |  |
+| 2500551 | Greenfield Commonwealth Virtual District | MA | 590.00 | 590.00 | 590.00 | 100.00 | 100.00 | 1.00 | 1.00 |  |
+| 1811730 | Union School Corporation | IN | 3,371.00 | 3,085.00 | 3,085.00 | 91.52 | 91.52 | 3.00 | 3.00 |  |
+| 5307020 | Quillayute Valley School District | WA | 3,283.00 | 2,210.00 | 2,210.00 | 67.32 | 67.32 | 2.00 | 2.00 |  |
+| 2005790 | Elkhart | KS | 1,248.00 | 809.00 | 809.00 | 64.82 | 64.82 | 1.00 | 1.00 |  |
+| 1602490 | ONEIDA COUNTY DISTRICT | ID | 2,464.00 | 1,549.00 | 1,549.00 | 62.87 | 62.87 | 1.00 | 1.00 |  |
+| 1905940 | CAM Comm School District | IA | 1,121.00 | 614.00 | 614.00 | 54.82 | 54.82 | 3.00 | 3.00 |  |
+| 0101410 | Eufaula City | AL | 5,427.00 | 2,798.00 | 2,798.00 | 51.56 | 51.56 | 1.00 | 1.00 |  |
+| 0806810 | Summit School District No. Re 1 | CO | 3,577.00 | 0.00 | 1,832.00 | 0.00 | 51.22 | 0.00 | 3.00 |  |
+| 2605430 | Berrien Springs Public Schools | MI | 3,827.00 | 1,865.00 | 1,921.00 | 48.76 | 50.22 | 14.00 | 15.00 |  |
+| 1600720 | CHALLIS JOINT DISTRICT | ID | 357.00 | 178.00 | 178.00 | 49.86 | 49.86 | 1.00 | 1.00 |  |
+| 2104620 | Owsley County | KY | 803.00 | 0.00 | 390.00 | 0.00 | 48.57 | 0.00 | 1.00 |  |
+| 4822170 | HALLSVILLE ISD | TX | 9,486.00 | 4,438.00 | 4,438.00 | 46.78 | 46.78 | 1.00 | 1.00 |  |
+| 5508910 | McFarland School District | WI | 4,447.00 | 1,915.00 | 1,915.00 | 43.06 | 43.06 | 4.00 | 4.00 |  |
+| 1913350 | Clayton Ridge Comm School District | IA | 1,020.00 | 433.00 | 433.00 | 43.00 | 43.00 | 1.00 | 1.00 |  |
+| 2000002 | Smoky Valley | KS | 1,454.00 | 615.00 | 615.00 | 42.89 | 42.89 | 1.00 | 1.00 |  |
+| 2006720 | Kiowa County | KS | 469.00 | 193.00 | 193.00 | 41.15 | 41.15 | 1.00 | 1.00 |  |
+| 5505670 | Grantsburg School District | WI | 1,463.00 | 589.00 | 589.00 | 40.26 | 40.26 | 1.00 | 1.00 |  |
+| 2003360 | Andover | KS | 8,825.00 | 3,268.00 | 3,268.00 | 37.03 | 37.03 | 1.00 | 1.00 | yes |
+| 2620160 | Kelloggsville Public Schools | MI | 2,418.00 | 0.00 | 820.00 | 0.00 | 34.24 | 0.00 | 2.00 |  |
+| 4704290 | Union County | TN | 4,509.00 | 1,522.00 | 1,522.00 | 33.75 | 33.75 | 2.00 | 2.00 |  |
+| 2633360 | Suttons Bay Public Schools | MI | 612.00 | 200.00 | 200.00 | 33.22 | 33.22 | 1.00 | 1.00 |  |
+| 4612300 | Chester Area School District 39-1 | SD | 570.00 | 0.00 | 179.00 | 0.00 | 31.40 | 0.00 | 2.00 |  |
+| 0627030 | New Jerusalem Elementary | CA | 1,768.00 | 240.00 | 554.00 | 13.57 | 31.33 | 2.00 | 4.00 |  |
+| 4824030 | HUNTSVILLE ISD | TX | 8,928.00 | 2,790.00 | 2,790.00 | 31.25 | 31.25 | 3.00 | 3.00 |  |
+| 0806450 | Sargent School District No. Re-33J | CO | 347.00 | 0.00 | 107.00 | 0.00 | 30.84 | 0.00 | 1.00 |  |
+| 0616650 | Hart-Ransom Union Elementary | CA | 1,173.00 | 0.00 | 360.00 | 0.00 | 30.77 | 0.00 | 1.00 |  |
+| 5504890 | Northern Ozaukee School District | WI | 1,030.00 | 304.00 | 304.00 | 29.51 | 29.51 | 1.00 | 1.00 |  |
+| 0804350 | Mesa County Valley School District No. 51 | CO | 22,082.00 | 310.00 | 6,386.00 | 1.40 | 28.92 | 1.00 | 7.00 |  |
+| 0100870 | Conecuh County | AL | 1,941.00 | 559.00 | 559.00 | 28.80 | 28.80 | 1.00 | 1.00 |  |
+| 4112600 | Umatilla SD 6R | OR | 1,367.00 | 0.00 | 389.00 | 0.00 | 28.46 | 0.00 | 1.00 |  |
+| 2101260 | Clinton County | KY | 1,804.00 | 0.00 | 509.00 | 0.00 | 28.22 | 0.00 | 1.00 |  |
+| 0806240 | Garfield School District No. Re-2 | CO | 4,789.00 | 0.00 | 1,347.00 | 0.00 | 28.13 | 0.00 | 2.00 |  |
+| 2626220 | Oakridge Public Schools | MI | 2,039.00 | 0.00 | 557.00 | 0.00 | 27.52 | 0.00 | 1.00 |  |
+| 0805610 | Meeker School District Re1 | CO | 758.00 | 0.00 | 204.00 | 0.00 | 26.91 | 0.00 | 1.00 |  |
+| 2011850 | Spring Hill | KS | 4,311.00 | 1,156.00 | 1,156.00 | 26.82 | 26.82 | 2.00 | 2.00 |  |
+| 5303990 | Kettle Falls School District | WA | 1,070.00 | 0.00 | 283.00 | 0.00 | 26.45 | 0.00 | 1.00 |  |
+| 4103390 | Coquille SD 8 | OR | 1,202.00 | 0.00 | 307.00 | 0.00 | 25.69 | 0.00 | 1.00 |  |
+| 0805550 | Mapleton School District No. 1 in the county of Adams & St | CO | 8,934.00 | 2,270.00 | 2,270.00 | 25.41 | 25.41 | 1.00 | 1.00 |  |
+| 2004020 | Otis-Bison | KS | 265.00 | 66.00 | 66.00 | 25.00 | 25.00 | 1.00 | 1.00 |  |
+| 2620340 | Kentwood Public Schools | MI | 9,276.00 | 0.00 | 2,177.00 | 0.00 | 23.88 | 0.00 | 2.00 |  |
+| 0807350 | Weld County Reorganized School District No. Re-4 | CO | 6,785.00 | 0.00 | 1,594.00 | 0.00 | 23.49 | 0.00 | 1.00 |  |
+| 2622290 | Madison District Public Schools | MI | 1,509.00 | 321.00 | 321.00 | 21.57 | 21.57 | 1.00 | 1.00 |  |
+| 0640230 | Twin Hills Union Elementary | CA | 1,207.00 | 0.00 | 234.00 | 0.00 | 19.42 | 0.00 | 1.00 |  |
+| 0102100 | Limestone County | AL | 10,612.00 | 2,018.00 | 2,018.00 | 19.02 | 19.02 | 1.00 | 1.00 |  |
+| 2706240 | BROOKLYN CENTER SCHOOL DISTRICT | MN | 2,492.00 | 415.00 | 415.00 | 16.65 | 16.65 | 1.00 | 1.00 |  |
+| 2744160 | WORTHINGTON PUBLIC SCHOOL DISTRICT | MN | 3,904.00 | 632.00 | 632.00 | 16.19 | 16.19 | 1.00 | 1.00 |  |
+| 2711880 | FERGUS FALLS PUBLIC SCHOOL DISTRICT | MN | 2,890.00 | 438.00 | 438.00 | 15.16 | 15.16 | 1.00 | 1.00 |  |
+| 0603180 | Armona Union Elementary | CA | 1,137.00 | 0.00 | 172.00 | 0.00 | 15.13 | 0.00 | 1.00 |  |
+| 2634920 | Vestaburg Community Schools | MI | 717.00 | 103.00 | 103.00 | 14.67 | 14.67 | 1.00 | 1.00 |  |
+| 0100120 | Athens City | AL | 4,284.00 | 585.00 | 585.00 | 13.66 | 13.66 | 1.00 | 1.00 |  |
+| 4111220 | Sheridan SD 48J | OR | 959.00 | 128.00 | 128.00 | 13.65 | 13.65 | 1.00 | 1.00 |  |
+| 0803480 | Durango School District No. 9-R | CO | 5,419.00 | 728.00 | 728.00 | 13.47 | 13.47 | 1.00 | 1.00 |  |
+| 2617760 | Harper Woods The School District of the City of | MI | 2,349.00 | 292.00 | 292.00 | 12.47 | 12.47 | 3.00 | 3.00 |  |
+| 5506270 | Hayward Community School District | WI | 2,063.00 | 224.00 | 224.00 | 10.86 | 10.86 | 1.00 | 1.00 |  |
+| 2610080 | Clintondale Community Schools | MI | 2,722.00 | 283.00 | 283.00 | 10.64 | 10.64 | 1.00 | 1.00 |  |
+| 0613170 | Evergreen Union | CA | 1,217.00 | 0.00 | 127.00 | 0.00 | 10.44 | 0.00 | 1.00 |  |
+| 2627240 | Oxford Community Schools | MI | 5,587.00 | 536.00 | 536.00 | 9.64 | 9.64 | 1.00 | 1.00 |  |
+| 2618810 | Hudson Area Schools | MI | 1,133.00 | 0.00 | 104.00 | 0.00 | 9.19 | 0.00 | 1.00 |  |
+| 2603870 | Bangor Public Schools (Van Buren) | MI | 1,118.00 | 0.00 | 100.00 | 0.00 | 8.94 | 0.00 | 1.00 |  |
+| 2617250 | Gull Lake Community Schools | MI | 3,231.00 | 0.00 | 286.00 | 0.00 | 8.88 | 0.00 | 3.00 |  |
+| 2008400 | Lawrence | KS | 11,985.00 | 1,031.00 | 1,031.00 | 8.68 | 8.68 | 1.00 | 1.00 |  |
+| 2618030 | Hazel Park School District of the City of | MI | 3,229.00 | 272.00 | 272.00 | 8.46 | 8.46 | 2.00 | 2.00 |  |
+| 5510380 | Nekoosa School District | WI | 1,183.00 | 0.00 | 98.00 | 0.00 | 8.28 | 0.00 | 1.00 |  |
+| 2632640 | St. Charles Community Schools | MI | 912.00 | 75.00 | 75.00 | 8.28 | 8.28 | 1.00 | 1.00 |  |
+| 4104500 | Eagle Point SD 9 | OR | 4,181.00 | 0.00 | 336.00 | 0.00 | 8.14 | 0.00 | 2.00 |  |
+| 2611640 | Westwood Community School District | MI | 1,660.00 | 0.00 | 133.00 | 0.00 | 8.07 | 0.00 | 1.00 |  |
+| 2607080 | Flat Rock Community Schools | MI | 2,044.00 | 0.00 | 161.00 | 0.00 | 7.88 | 0.00 | 2.00 |  |
+| 5502130 | Cameron School District | WI | 1,149.00 | 92.00 | 92.00 | 7.83 | 7.83 | 1.00 | 1.00 |  |
+| 5507710 | Lake Mills Area School District | WI | 1,588.00 | 127.00 | 127.00 | 7.64 | 7.64 | 1.00 | 1.00 |  |
+| 4677460 | Wessington Springs School District 36-2 | SD | 329.00 | 25.00 | 25.00 | 7.60 | 7.60 | 3.00 | 3.00 |  |
+| 5506060 | Saint Croix Central School District | WI | 1,726.00 | 123.00 | 123.00 | 7.13 | 7.13 | 1.00 | 1.00 |  |
+| 4665460 | Oglala Lakota County 65-1 | SD | 1,415.00 | 96.00 | 96.00 | 6.79 | 6.79 | 1.00 | 1.00 |  |
+| 2612540 | East Jackson Community Schools | MI | 937.00 | 0.00 | 62.00 | 0.00 | 6.62 | 0.00 | 1.00 |  |
+| 2006960 | Haven Public Schools | KS | 820.00 | 53.00 | 53.00 | 6.46 | 6.46 | 1.00 | 1.00 |  |
+| 5515780 | Waukesha School District | WI | 12,739.00 | 819.00 | 819.00 | 6.43 | 6.43 | 2.00 | 2.00 |  |
+| 2603690 | Avondale School District | MI | 3,771.00 | 230.00 | 230.00 | 6.20 | 6.20 | 1.00 | 1.00 |  |
+| 4103860 | Dallas SD 2 | OR | 3,243.00 | 0.00 | 193.00 | 0.00 | 6.07 | 0.00 | 1.00 |  |
+| 2618510 | Holton Public Schools | MI | 837.00 | 0.00 | 50.00 | 0.00 | 6.02 | 0.00 | 1.00 |  |
+| 2607800 | Capac Community Schools | MI | 889.00 | 52.00 | 52.00 | 5.92 | 5.92 | 1.00 | 1.00 |  |
+| 2606600 | Brandywine Community Schools | MI | 1,334.00 | 0.00 | 79.00 | 0.00 | 5.92 | 0.00 | 1.00 |  |
+| 2612930 | Ecorse Public Schools | MI | 1,055.00 | 8.00 | 62.00 | 0.76 | 5.88 | 1.00 | 2.00 |  |
+| 2608580 | Center Line Public Schools | MI | 2,553.00 | 144.00 | 144.00 | 5.72 | 5.72 | 1.00 | 1.00 |  |
+| 4821660 | GRAPEVINE-COLLEYVILLE ISD | TX | 13,941.00 | 759.00 | 759.00 | 5.44 | 5.44 | 1.00 | 1.00 |  |
+| 5504290 | Elkhorn Area School District | WI | 3,469.00 | 0.00 | 191.00 | 0.00 | 5.44 | 0.00 | 1.00 |  |
+| 0409733 | Sedona-Oak Creek JUSD #9 (4467) | AZ | 509.00 | 20.00 | 20.00 | 5.39 | 5.39 | 1.00 | 1.00 |  |
+| 0806060 | Peyton School District No. 23 in the county of El Paso and | CO | 593.00 | 31.00 | 31.00 | 5.23 | 5.23 | 1.00 | 1.00 |  |
+| 4700360 | Bristol | TN | 4,172.00 | 216.00 | 216.00 | 5.18 | 5.18 | 1.00 | 1.00 |  |
+| 5515120 | Two Rivers Public School District | WI | 1,821.00 | 94.00 | 94.00 | 5.16 | 5.16 | 1.00 | 1.00 |  |
+| 2009140 | Maize | KS | 7,833.00 | 400.00 | 400.00 | 5.11 | 5.11 | 1.00 | 1.00 |  |
+| 2605780 | Big Rapids Public Schools | MI | 2,061.00 | 0.00 | 103.00 | 0.00 | 5.02 | 0.00 | 1.00 |  |
+
+### Cross-check: name-based proxy vs the official field
+
+Proxy: school name matches `virtual|online|cyber|\be-?cademy|\be-?school|\be-?learning|distance learning|digital academy|internet` (case-insensitive). Schools of the sample districts only.
+
+- proxy hits: 437; official fully/primarily virtual: 690; both: 417
+- proxy only (name says virtual, field does not): 20, members 2,612; by VIRTUAL value: NOTVIRTUAL = 12, SUPPVIRTUAL = 8
+- official only (field says virtual, name does not): 273, members 60,804
+
+#### Proxy only, 40 largest
+
+| LEAID | district_name | state | SCH_NAME | STUDENT_COUNT | VIRTUAL |
+|---|---|---|---|---|---|
+| 3904375 | Cincinnati Public Schools | OH | Virtual High School | 627.00 | NOTVIRTUAL |
+| 2601103 | Detroit Public Schools Community District | MI | West Side Academy of Information Technology and Cyber Securi | 482.00 | NOTVIRTUAL |
+| 3904445 | Newark City | OH | Newark Digital Academy | 331.00 | NOTVIRTUAL |
+| 0803360 | School District No. 1 in the county of Denver and State of C | CO | DENVER ONLINE HIGH SCHOOL | 269.00 | SUPPVIRTUAL |
+| 0803060 | Colorado Springs School District No. 11 in the county of E | CO | ACHIEVE ONLINE | 252.00 | SUPPVIRTUAL |
+| 5509600 | Milwaukee School District | WI | Milwaukee Community Cyber High | 168.00 | SUPPVIRTUAL |
+| 4219170 | Pittsburgh SD | PA | Pittsburgh Online Academy | 142.00 | NOTVIRTUAL |
+| 2633420 | Swartz Creek Community Schools | MI | Swartz Creek Virtual Learning Center | 108.00 | NOTVIRTUAL |
+| 2730030 | PRINCETON PUBLIC SCHOOL DISTRICT | MN | Princeton Online Academy | 62.00 | NOTVIRTUAL |
+| 3904371 | Canton City | OH | Canton City Digital Academy | 52.00 | NOTVIRTUAL |
+| 5302280 | East Valley School District (Spokane) | WA | EV Online | 42.00 | SUPPVIRTUAL |
+| 5305910 | Northshore School District | WA | Northshore Online School | 29.00 | SUPPVIRTUAL |
+| 5308100 | South Bend School District | WA | Pacific Virtual Learning | 25.00 | SUPPVIRTUAL |
+| 5306570 | Pasco School District | WA | Internet Pasco Academy of Learning | 13.00 | NOTVIRTUAL |
+| 3904516 | Youngstown City | OH | Youngstown Virtual Academy | 10.00 | NOTVIRTUAL |
+| 2400330 | Frederick County Public Schools | MD | Frederick County Virtual School | 0.00 | SUPPVIRTUAL |
+| 2714220 | EDEN PRAIRIE PUBLIC SCHOOL DISTRICT | MN | Eden Prairie Online | 0.00 | SUPPVIRTUAL |
+| 2733840 | ST. PAUL PUBLIC SCHOOL DISTRICT | MN | ALC Online School | 0.00 | NOTVIRTUAL |
+| 4835100 | PLANO ISD | TX | E-SCHOOL | 0.00 | NOTVIRTUAL |
+| 5308020 | Snohomish School District | WA | Snohomish Online Learning | 0.00 | NOTVIRTUAL |
+
+#### Official only, 40 largest
+
+| LEAID | district_name | state | SCH_NAME | STUDENT_COUNT | VIRTUAL |
+|---|---|---|---|---|---|
+| 4823640 | HOUSTON ISD | TX | TEXAS CONNECTIONS ACADEMY AT HOUSTON | 5,696.00 | FULLVIRTUAL |
+| 0805550 | Mapleton School District No. 1 in the county of Adams & St | CO | COLORADO CONNECTIONS ACADEMY | 2,270.00 | FULLVIRTUAL |
+| 5307020 | Quillayute Valley School District | WA | Insight School of Washington | 2,204.00 | FULLVIRTUAL |
+| 2620340 | Kentwood Public Schools | MI | East Kentwood High School | 1,981.00 | FACEVIRTUAL |
+| 0804350 | Mesa County Valley School District No. 51 | CO | CENTRAL HIGH SCHOOL | 1,598.00 | FACEVIRTUAL |
+| 0807350 | Weld County Reorganized School District No. Re-4 | CO | WINDSOR HIGH SCHOOL | 1,594.00 | FACEVIRTUAL |
+| 1602490 | ONEIDA COUNTY DISTRICT | ID | IDAHO HOME LEARNING ACADEMY | 1,549.00 | FULLVIRTUAL |
+| 0804350 | Mesa County Valley School District No. 51 | CO | GRAND JUNCTION HIGH SCHOOL | 1,534.00 | FACEVIRTUAL |
+| 1811730 | Union School Corporation | IN | Indiana Digital JR and High School | 1,442.00 | FULLVIRTUAL |
+| 1200870 | HILLSBOROUGH | FL | FLORIDA CONNECTIONS ACADEMY | 1,433.00 | FULLVIRTUAL |
+| 1811730 | Union School Corporation | IN | Indiana Digital Elementary | 1,341.00 | FULLVIRTUAL |
+| 0804350 | Mesa County Valley School District No. 51 | CO | FRUITA MONUMENT HIGH SCHOOL | 1,329.00 | FACEVIRTUAL |
+| 0804350 | Mesa County Valley School District No. 51 | CO | PALISADE HIGH SCHOOL | 1,005.00 | FACEVIRTUAL |
+| 0806810 | Summit School District No. Re 1 | CO | SUMMIT HIGH SCHOOL | 958.00 | FACEVIRTUAL |
+| 2011850 | Spring Hill | KS | Insight School of KS at Hilltop Ed Center | 859.00 | FULLVIRTUAL |
+| 2005790 | Elkhart | KS | Kansas Connections Academy | 809.00 | FULLVIRTUAL |
+| 0806810 | Summit School District No. Re 1 | CO | SUMMIT MIDDLE SCHOOL | 795.00 | FACEVIRTUAL |
+| 0806240 | Garfield School District No. Re-2 | CO | RIFLE HIGH SCHOOL | 770.00 | FACEVIRTUAL |
+| 4821660 | GRAPEVINE-COLLEYVILLE ISD | TX | IUNIVERSITY PREP | 759.00 | FULLVIRTUAL |
+| 5515780 | Waukesha School District | WI | eAchieve Academy - Wisconsin | 737.00 | FULLVIRTUAL |
+| 0803480 | Durango School District No. 9-R | CO | COLORADO CONNECTIONS ACADEMY @ DURANGO | 728.00 | FULLVIRTUAL |
+| 2620160 | Kelloggsville Public Schools | MI | Kelloggsville High School | 727.00 | FACEVIRTUAL |
+| 0628470 | Ontario-Montclair | CA | Vernon Middle | 700.00 | FACEVIRTUAL |
+| 5505670 | Grantsburg School District | WI | iForward | 589.00 | FULLVIRTUAL |
+| 0100120 | Athens City | AL | Athens Renaissance School | 585.00 | FULLVIRTUAL |
+| 0806240 | Garfield School District No. Re-2 | CO | COAL RIDGE HIGH SCHOOL | 577.00 | FACEVIRTUAL |
+| 1500030 | Hawaii Department of Education | HI | Myron B. Thompson Academy - A New Century PCS | 568.00 | FACEVIRTUAL |
+| 0100870 | Conecuh County | AL | Genesis Innovative School | 559.00 | FULLVIRTUAL |
+| 5500390 | Appleton Area School District | WI | Wisconsin Connections Academy | 557.00 | FULLVIRTUAL |
+| 2626220 | Oakridge Public Schools | MI | Oakridge High School | 557.00 | FACEVIRTUAL |
+| 0801920 | Academy School District No. 20 in the county of El Paso an | CO | TCA COLLEGE PATHWAYS | 528.00 | FULLVIRTUAL |
+| 4106000 | Gresham-Barlow SD 10J | OR | Metro East Web Academy | 522.00 | FACEVIRTUAL |
+| 2101260 | Clinton County | KY | Clinton County Middle School | 509.00 | FACEVIRTUAL |
+| 4108830 | North Clackamas SD 12 | OR | Clackamas Web Academy | 445.00 | FACEVIRTUAL |
+| 2711880 | FERGUS FALLS PUBLIC SCHOOL DISTRICT | MN | IQ ACADEMY MINNESOTA | 438.00 | FULLVIRTUAL |
+| 2102990 | Jefferson County | KY | Jefferson County High | 434.00 | FACEVIRTUAL |
+| 2706240 | BROOKLYN CENTER SCHOOL DISTRICT | MN | INSIGHT SCHOOL OF MINNESOTA | 415.00 | FULLVIRTUAL |
+| 2104620 | Owsley County | KY | Owsley County High School | 390.00 | FACEVIRTUAL |
+| 4112600 | Umatilla SD 6R | OR | Umatilla High School | 389.00 | FACEVIRTUAL |
+| 1905940 | CAM Comm School District | IA | Iowa Connections Academy High School | 381.00 | FULLVIRTUAL |
