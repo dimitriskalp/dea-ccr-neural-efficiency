@@ -160,7 +160,7 @@ SCHOOL_FILES = {
 }
 SCHOOL_TOTAL = "Education Unit Total"       # the one total row per school
 # CCD 2018-19 VIRTUAL categories, labels from the School Characteristics
-# companion (data/dictionaries/2018-19_School_CCD_School_Companion.xlsx):
+# companion (docs/data_dictionaries/2018-19_School_CCD_School_Companion.xlsx):
 #   FULLVIRTUAL  Full Virtual               FACEVIRTUAL  Virtual with face to
 #   SUPPVIRTUAL  Supplemental Virtual                    face options
 #   NOTVIRTUAL   Not Virtual                MISSING / Not reported

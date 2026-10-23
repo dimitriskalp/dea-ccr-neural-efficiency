@@ -1,164 +1,132 @@
-# DEA & Machine Learning for Efficiency Prediction
+# DEA and neural networks for the efficiency of US school districts
 
-Measuring the technical efficiency of US public universities with Data
-Envelopment Analysis, then predicting those efficiency scores with machine
-learning models.
+MSc thesis project. Technical efficiency of US public school districts in
+school year 2018-19 is measured with Data Envelopment Analysis (CCR,
+input-oriented), and a neural network is then trained to predict the DEA
+scores from the same inputs and outputs plus context variables that DEA
+cannot use.
 
-MSc thesis project.
+## Research question
 
----
+DEA solves one linear program per unit, so it scales poorly and cannot
+score a unit that was not in the original problem without re-solving
+everything. Can a neural network trained on DEA scores approximate the
+efficiency frontier well enough to be useful, and what is lost in the
+process? The approach follows Athanassopoulos and Curram (1996) and
+Emrouznejad and Shale (2009).
 
-## Motivation
+## DEA specification
 
-DEA measures the relative efficiency of Decision Making Units (DMUs) by
-solving one linear program per unit. This works well but has two practical
-limits: it does not scale to very large samples, and it cannot produce a score
-for a unit that was not part of the original problem without re-solving
-everything from scratch.
-
-This project tests whether a machine learning model trained on DEA scores can
-approximate the efficiency frontier well enough to be useful — and what is lost
-in the process.
-
-The approach follows the line of work started by Athanassopoulos & Curram
-(1996) and extended by Emrouznejad & Shale (2009).
-
----
-
-## Approach
-
-1. Compute CCR efficiency scores for every institution (input-oriented, CRS).
-2. Use those scores as the target variable.
-3. Train models on the DEA inputs and outputs, then on an extended feature set
-   that also includes contextual variables not admissible in DEA itself.
-4. Compare a neural network against linear regression and decision tree
-   baselines under repeated k-fold cross-validation.
-
----
-
-## Data
-
-All data come from **IPEDS** (Integrated Postsecondary Education Data System),
-National Center for Education Statistics — Complete Data Files.
-Collection year 2024; finance data cover fiscal year 2023–24.
-
-Download page: https://nces.ed.gov/ipeds/datacenter/DataFiles.aspx
-
-| File | Survey | Used for |
+| role | variable | source |
 |---|---|---|
-| `HD2024` | Institutional Characteristics | Sample selection, contextual variables |
-| `F2324_F1A` | Finance (GASB) | Operating expenses |
-| `S2024_OC` | Fall Staff | Instructional staff |
-| `EFIA2024_RV` | 12-Month Enrollment | FTE students |
-| `C2024_C_RV` | Completions | Degrees conferred |
+| input | `exp_current`: total current expenditure, elementary/secondary (USD) | F-33 `TCURELSC` |
+| input | `staff_teachers_fte`: teachers (FTE) | CCD LEA Staff |
+| input | `staff_other_fte`: all other staff (FTE) | CCD LEA Staff |
+| output | `out_math`: pupils x math achievement (grade-level equivalents) | F-33 `V33` x SEDA |
+| output | `out_rla`: pupils x reading/language-arts achievement | F-33 `V33` x SEDA |
 
-Raw files are **not** tracked in this repository. Download them from the link
-above into `data/raw/` and run the build script.
+Achievement is the SEDA empirical-Bayes district mean on the grade-cohort
+scale, re-anchored to grade 5.5 so that districts with different tested
+grades are comparable. Multiplying by pupils turns a quality index into a
+volume, which constant returns to scale require.
 
-### Sample selection
+Models: CCR two-phase (radial score, then maximal slacks), BCC, scale
+efficiency and Andersen-Petersen super-efficiency, all solved with HiGHS
+through `scipy.optimize.linprog`.
 
-| Step | N |
-|---|---|
-| All institutions in HD2024 | 6,072 |
-| Public (`CONTROL=1`) and 4-year (`ICLEVEL=1`) | 896 |
-| Master's institutions (`C21BASIC` in 18, 19, 20) | 238 |
-| No medical school (`MEDICAL≠1`) | 237 |
-| Present in all five files | 231 |
+## Data sources
 
-Master's institutions were chosen for homogeneity of production technology:
-none operate a hospital and research activity is limited, unlike R1/R2
-universities.
+Raw files are not tracked. Download them into `data/raw/` with exactly
+these names; the companion documents are in `docs/data_dictionaries/`.
 
-### Variables
-
-| Role | Variable | Construction |
+| file | source | used for |
 |---|---|---|
-| Input | `EG_EXP` | Education & General expenses: sum of `F1C011`, `F1C021`, `F1C031`, `F1C051`, `F1C061`, `F1C071` |
-| Input | `FAC_FTE` | Instructional staff (`OCCUPCAT=210`): full-time + part-time / 3 |
-| Input | `FTE_STUD` | `FTEUG` + `FTEGD` |
-| Output | `BACH` | Bachelor's degrees (`AWLEVELC=5`) |
-| Output | `MAST` | Master's degrees (`AWLEVELC=7`) |
-| Contextual | `STABBR`, `LOCALE`, `HBCU`, `C21BASIC` | ML feature set only, excluded from DEA |
+| `ccd_lea_029_1819_w_1a_091019.csv` | CCD LEA Directory 2018-19 | sample selection, grade span |
+| `ccd_lea_059_1819_l_1a_091019.csv` | CCD LEA Staff 2018-19 | teachers and other staff (FTE) |
+| `ccd_sch_029_1819_w_1a_091019.csv` | CCD School Directory 2018-19 | school names (cross-check) |
+| `ccd_sch_129_1819_w_1a_091019.csv` | CCD School Characteristics 2018-19 | virtual status (`VIRTUAL`) |
+| `ccd_SCH_052_1819_l_1a_091019.csv` | CCD School Membership 2018-19 (2.5 GB) | school enrollment, reduced once to `data/interim/school_membership_1819.csv` |
+| `sdf18_1a.txt`, `sdf19_2a.txt`, `sdf20_2a.txt` | F-33 School District Finance Survey FY2018-FY2020 | expenditures, fall membership, temporal check |
+| `seda_admindist_annualsub_gcs_6.0.csv` | SEDA 6.0, administrative districts, annual, by subject | math and RLA achievement |
+| `seda_cov_admindist_annual_6.0.csv` | SEDA 6.0 district covariates | context variables (ML stage only) |
 
-Auxiliary enterprise expenses (housing, dining, bookstores) are excluded —
-roughly 24% of total expenses — since they do not contribute to degree
-production.
+Download pages: CCD nonfiscal files at
+<https://nces.ed.gov/ccd/files.asp>; F-33 at
+<https://nces.ed.gov/ccd/f33agency.asp>; SEDA 6.0 at
+<https://edopportunity.org/get-the-data/>.
 
----
+## Sample selection
 
-## Repository structure
+Districts are regular public school districts (CCD LEA type 1 or 2) that
+are open and offer at least one of grades 3-8. After merging the four
+sources, the rules below are applied in this order; each removes districts
+given the rules above it (`reports/sample_flow.md`, written by the build).
+
+| rule | removed | remaining |
+|---|---|---|
+| merged (directory, staff, finance, scores) | | 11,252 |
+| complete DEA variables | 273 | 10,979 |
+| strictly positive DEA variables | 11 | 10,968 |
+| state comparability: Utah and Nevada report other staff on a different basis | 52 | 10,916 |
+| data-quality screen: any input ratio beyond 5 robust SD of the median (log scale) | 67 | 10,849 |
+| temporal consistency: FY2019 is a one-year spike or dip in F-33 spending per pupil or membership | 33 | 10,816 |
+| enrollment consistency: fall membership too high against SEDA grade 3-8 enrollment, within grade-span groups | 106 | 10,710 |
+| virtual-school share: 10 % or more of pupils in fully virtual schools (CCD `FULLVIRTUAL`) | 30 | 10,680 |
+
+Every excluded district is written to `data/processed/excluded_*.csv`
+with the statistic that triggered the rule. Robust-z screens compute
+their median and MAD on the sample they receive, so each is calibrated on
+the districts that survive the earlier rules. The virtual rule treats
+`FACEVIRTUAL`, `SUPPVIRTUAL` and schools with a missing status as not
+virtual. Robustness variants: `--dq-threshold 4`, `--keep-states`,
+`--virtual-threshold 0.05` or `0.20`; they write suffixed files and never
+overwrite the main dataset.
+
+## Robustness runs
+
+Available as switches of the build (they write suffixed files): the
+data-quality screen at 4 robust SD (`--dq-threshold 4`), keeping Utah and
+Nevada (`--keep-states`), the virtual rule at 5 % or 20 %
+(`--virtual-threshold 0.05`, `0.20`).
+
+Planned, not yet run: separate CCR frontiers for elementary-only districts
+(no grade 9-12 offered) and for K-12 / unified districts. Elementary
+districts face lower unit costs, and most of the CCR-efficient units are
+elementary districts. The dataset carries the grade span for this and for
+the ML stage: `grade_lo`, `grade_hi`, `lea_level` (CCD) and
+`elementary_only`.
+
+## How to run
+
+From the project root, with Python 3.11+ and `pip install -r requirements.txt`:
 
 ```
-data/
-  raw/                  # IPEDS downloads (gitignored)
-  processed/            # built analysis sample
-src/
-  build_dataset.py      # download -> clean -> merge -> validate
-  dea.py                # CCR and BCC models
-  predict.py            # ML models and cross-validation
-notebooks/              # exploratory analysis
-requirements.txt
+python src/build_dataset.py            # data/processed/dea_districts_2019.csv, sample flow
+python src/dea.py --model all --n-jobs 10 --time-serial-phase1 \
+       [--compare data/processed/<earlier scores>.csv]
+                                       # scores CSV, reports/dea_summary.md, run metadata
+python src/screens.py                  # report-only screens (reports/screens_report.md)
+python src/diagnostics.py              # exclusion concentration, efficient-unit diagnostics
+python src/figures.py                  # reports/figures/*.pdf and *.png
+python -m pytest                       # tests
 ```
 
-## Running
+The first run of `screens.py` or `diagnostics.py` reduces the 2.5 GB
+Membership file to `data/interim/school_membership_1819.csv`; later runs
+use the cache (`screens.py --rebuild-membership` to redo it).
 
-```bash
-pip install -r requirements.txt
-python src/build_dataset.py     # writes data/processed/dea_dataset_2024.csv
-python src/dea.py               # computes efficiency scores
-python src/predict.py           # trains and evaluates models
+## Repository layout
+
 ```
-
----
-
-## Validation checks
-
-The build script enforces four conditions before any analysis:
-
-- **Positivity** — CCR requires strictly positive inputs and outputs.
-- **Sample adequacy** — n ≥ 3(m + s); here 231 ≥ 15.
-- **Isotonicity** — all input–output Spearman correlations positive
-  (observed range 0.57 to 0.94).
-- **No duplicate `UNITID`.**
-
-The DEA implementation is verified by unit-invariance: multiplying all inputs
-by a constant must leave every score unchanged.
-
----
-
-## Known issues
-
-- The finance file is a **provisional** release; the other files are revised.
-  IPEDS files are periodically updated, so download dates matter.
-- Two institutions (Louisiana State University–Shreveport and Colorado State
-  University Global) show super-efficiency scores of 2.50 and 1.55 against
-  1.01–1.11 for all other efficient units, and act as peers for a large share
-  of the sample. Both appear to be distance-education institutions, i.e. a
-  different production technology. Results are reported with and without them.
-- Two institutions are lost in the merges due to survey non-response.
-- DEA scores depend on the whole sample, since the frontier is defined jointly.
-  Out-of-sample evaluation is therefore not fully independent — an inherent
-  property of this design, discussed in the thesis limitations.
-
----
-
-## Key references
-
-- Charnes, A., Cooper, W. W., & Rhodes, E. (1978). Measuring the efficiency of
-  decision making units. *European Journal of Operational Research*, 2(6),
-  429–444.
-- Athanassopoulos, A. D., & Curram, S. P. (1996). A comparison of data
-  envelopment analysis and artificial neural networks as tools for assessing
-  the efficiency of decision making units. *JORS*, 47(8), 1000–1016.
-- Emrouznejad, A., & Shale, E. (2009). A combined neural network and DEA for
-  measuring efficiency of large scale datasets. *Computers & Industrial
-  Engineering*, 56(1), 249–254.
-- Simar, L., & Wilson, P. W. (2007). Estimation and inference in two-stage,
-  semi-parametric models of production processes. *Journal of Econometrics*,
-  136(1), 31–64.
-
----
-
-## License
-
-MIT for the code. IPEDS data are in the public domain.
+src/build_dataset.py   build the district dataset: merge, validate, apply the sample rules
+src/dea.py             CCR / BCC / scale / super-efficiency, summary and run metadata
+src/screens.py         temporal, enrollment and virtual screens (functions + report)
+src/diagnostics.py     report-only diagnostics of the final sample
+src/figures.py         thesis figures (matplotlib, Okabe-Ito palette)
+tests/                 pytest: hand-computed DEA cases, duality, invariance, screens
+reports/               markdown reports, run metadata, figures/
+docs/data_dictionaries/ CCD companion workbooks and F-33 record layouts
+data/raw/              downloaded source files (ignored by git)
+data/interim/          cached intermediate tables (ignored)
+data/processed/        built dataset, exclusions, DEA scores (ignored)
+```

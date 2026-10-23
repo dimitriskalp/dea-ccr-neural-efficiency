@@ -67,6 +67,12 @@ REGULAR_LEA_TYPES = ["1", "2"]
 # SEDA scores cover grades 3-8, so the district must offer at least one of them.
 TESTED_GRADES = [f"G_{g}_OFFERED" for g in range(3, 9)]
 
+# Grade span (GSLO, GSHI, LEVEL and an elementary-only flag) is carried into
+# the dataset for the ML stage and for a planned robustness run with separate
+# CCR frontiers for elementary-only and K-12 districts. It is not used in the
+# main DEA. Elementary-only = offers none of grades 9-12.
+HIGH_SCHOOL_GRADES = [f"G_{g}_OFFERED" for g in range(9, 13)]
+
 # --- Staff (CCD Staff, long format) -----------------------------------------
 # TOTAL_INDICATOR mixes three aggregation levels in one file:
 #   "Category Set A"                     detailed categories
@@ -182,6 +188,10 @@ RENAME = {
     "ST":                  "state",
     "LEA_TYPE":            "lea_type",
     "OPERATIONAL_SCHOOLS": "n_schools",
+    "GSLO":                "grade_lo",
+    "GSHI":                "grade_hi",
+    "LEVEL":               "lea_level",
+    "ELEMENTARY_ONLY":     "elementary_only",
     "V33":                 "students",
     "TCURELSC":            "exp_current",
     "TCURINST":            "exp_instruction",
@@ -215,7 +225,8 @@ def read_csv(name, **kwargs):
 
 def select_sample(directory):
     """Operating, regular districts that offer at least one tested grade."""
-    keep = ["LEAID", "LEA_NAME", "ST", "LEA_TYPE", "OPERATIONAL_SCHOOLS"]
+    keep = ["LEAID", "LEA_NAME", "ST", "LEA_TYPE", "OPERATIONAL_SCHOOLS",
+            "GSLO", "GSHI", "LEVEL", "ELEMENTARY_ONLY"]
 
     df = directory
     log(len(df), "all LEAs")
@@ -229,6 +240,7 @@ def select_sample(directory):
     df = df[(df[TESTED_GRADES] == "Yes").any(axis=1)]
     log(len(df), "offer at least one of grades 3-8")
 
+    df = df.assign(ELEMENTARY_ONLY=~(df[HIGH_SCHOOL_GRADES] == "Yes").any(axis=1))
     df = df[keep].copy()
     df["LEAID"] = to_leaid(df.LEAID)
     return df.reset_index(drop=True)
@@ -526,12 +538,22 @@ def main(dq_threshold=DQ_THRESHOLD, apply_state_rule=True,
     excluded["reason"] = ec.ec_reason[hit]
     excluded.to_csv(OUT / ec_excluded_file, index=False)
     print(f"{int(hit.sum()):>7,}  excluded -> {OUT / ec_excluded_file}")
-    already = int((ec_all_hit & tc.tc_flag).sum())
+    # The robust z is recomputed on the current sample (as the data-quality
+    # screen is computed after the state rule), so a borderline district can
+    # cross the threshold once the temporal screen has removed its 33.
+    standalone = set(post_dq.leaid[ec_all_hit])
+    already = standalone & set(post_dq.leaid[tc.tc_flag])
+    dropped = standalone - already - set(df.leaid[hit])
+    added = set(df.leaid[hit]) - standalone
+    who = ", ".join(sorted(post_dq.district_name[post_dq.leaid.isin(dropped | added)]))
     n = len(df)
     df = df[~hit]
     flow_step(flow, "enrollment consistency screen (variant B, high side)", n, len(df),
               f"V33 high vs SEDA grade 3-8 enrollment; standalone on the post-DQ "
-              f"sample {int(ec_all_hit.sum())}, of which {already} already removed")
+              f"sample {len(standalone)}: {len(already)} already removed by earlier "
+              f"rules, {len(dropped)} below the threshold once median and MAD are "
+              f"recomputed after the temporal screen, {len(added)} newly above it"
+              + (f" ({who})" if who else ""))
 
     # Virtual-school share.
     print(f"\n--- virtual-school share (FULLVIRTUAL >= {100 * virtual_threshold:g} % of membership) ---")
@@ -566,7 +588,12 @@ def main(dq_threshold=DQ_THRESHOLD, apply_state_rule=True,
         f"{100 * virtual_threshold:g} %. Each row removes districts given the "
         "rules above it; 'standalone' counts are flags evaluated on the sample "
         "after the data-quality screen, so the difference is the overlap with "
-        "earlier rules.\n\n" + flow_table(flow) + "\n", encoding="utf-8")
+        "earlier rules.\n\nThe screens based on a robust z (data-quality, "
+        "temporal, enrollment) compute their median and MAD on the sample they "
+        "receive, so each is calibrated on the districts that survive the "
+        "earlier rules (sequential recomputation). The virtual share is a "
+        "school-level quantity and does not depend on the sample.\n\n"
+        + flow_table(flow) + "\n", encoding="utf-8")
     print(f"wrote {flow_file}")
 
     df.to_csv(OUT / output_file, index=False)
