@@ -1,5 +1,5 @@
 """
-build_dataset_districts.py
+build_dataset.py
 Build the main DEA sample (US public school districts) for school year 2018-19.
 
 Sources
@@ -11,10 +11,19 @@ Sources
 
 Input  : data/raw/  (files listed in FILES)
 Output : data/processed/dea_districts_2019.csv
+         data/processed/dea_districts_2019_unscreened.csv  (before exclusions)
+         data/processed/excluded_state_rule.csv
+         data/processed/excluded_data_quality.csv
+         (all with a suffix, _dq{T} and/or _allstates, when run with
+         non-default options, so the main dataset is never overwritten)
 
-Usage (from the project root): python src/build_dataset_districts.py
+Usage (from the project root):
+  python src/build_dataset.py                    # main dataset
+  python src/build_dataset.py --dq-threshold 4   # stricter screen
+  python src/build_dataset.py --keep-states      # without the state rule
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +32,7 @@ import pandas as pd
 RAW = Path("data/raw")
 OUT = Path("data/processed")
 OUTPUT_FILE = "dea_districts_2019.csv"
+UNSCREENED_FILE = "dea_districts_2019_unscreened.csv"   # before exclusions
 
 FILES = {
     "directory":  "ccd_LEA_029_1819_w_1a_091019.csv",
@@ -101,6 +111,36 @@ COVARIATES = {
 DEA_INPUTS = ["exp_current", "staff_teachers_fte", "staff_other_fte"]
 DEA_OUTPUTS = (["out_math", "out_rla"] if OUTPUT_MODE == "by_subject"
                else ["out_score"])
+
+# --- State comparability rule -----------------------------------------------
+# Utah and Nevada report "other staff" on a different basis from every other
+# state: their median is about 90 students per other-staff FTE against 13.8
+# nationally, with no overlap of the interquartile ranges (see
+# reports/figures/dq_state_other_staff_ratio.pdf and the per-state table in
+# reports/data_quality_screen.md). Their districts are not comparable on that
+# input, so both states leave the sample before the data-quality screen,
+# which is then calibrated on the remaining states. --keep-states turns the
+# rule off for robustness checks.
+EXCLUDED_STATES = ["UT", "NV"]
+EXCLUDED_STATE_FILE = "excluded_state_rule.csv"
+
+# --- Data-quality screen ----------------------------------------------------
+# Implausible input ratios point to reporting errors (e.g. 1 teacher FTE for
+# 1,030 students). Under CCR one such district can dominate the frontier, so
+# the screen runs after validation and is logged like any other sample step.
+# Rule: a district is flagged if the natural log of any ratio lies more than
+# DQ_THRESHOLD robust standard deviations from the median, where
+# robust SD = MAD_TO_SD * median absolute deviation of the log ratio
+# (1.4826 makes the MAD consistent with the SD of a normal distribution).
+DQ_RATIOS = {                       # name: (numerator, denominator)
+    "students_per_teacher":     ("students", "staff_teachers_fte"),
+    "students_per_other_staff": ("students", "staff_other_fte"),
+    "exp_per_student":          ("exp_current", "students"),
+}
+DQ_THRESHOLD = 5.0                  # main dataset
+DQ_THRESHOLD_ROBUSTNESS = 4.0       # stricter variant, --dq-threshold 4
+MAD_TO_SD = 1.4826
+EXCLUDED_FILE = "excluded_data_quality.csv"
 
 # Raw source names -> readable names (also the appendix mapping table).
 RENAME = {
@@ -263,7 +303,44 @@ def validate(df):
     return len(bad) == 0 and not negative
 
 
-def main():
+def data_quality_screen(df, threshold=DQ_THRESHOLD):
+    """Flag districts with implausible input ratios (see DQ_RATIOS).
+
+    Returns a frame aligned with df: each ratio, its robust z-score
+    (z_<ratio>), `dq_flag` (bool) and `dq_reason` (which rules fired).
+    Median and MAD are computed on the sample passed in, so the screen is
+    relative to the data, not to fixed cut-offs.
+    """
+    out = pd.DataFrame(index=df.index)
+    reasons = pd.Series("", index=df.index, dtype=str)
+    for name, (num, den) in DQ_RATIOS.items():
+        ratio = df[num] / df[den]
+        logr = np.log(ratio)
+        med = logr.median()
+        robust_sd = MAD_TO_SD * (logr - med).abs().median()
+        z = (logr - med) / robust_sd
+        out[name] = ratio
+        out[f"z_{name}"] = z
+        hit = z.abs() > threshold
+        side = np.where(z > 0, "high", "low")
+        tag = pd.Series([f"{name} {sd} (z={v:.1f})" for sd, v in zip(side, z)],
+                        index=df.index)
+        sep = reasons.where(reasons == "", reasons + "; ")
+        reasons = reasons.where(~hit, sep + tag)
+    out["dq_flag"] = reasons != ""
+    out["dq_reason"] = reasons
+    return out
+
+
+def main(dq_threshold=DQ_THRESHOLD, apply_state_rule=True):
+    # Non-default settings write to suffixed files so the main dataset is
+    # never overwritten by a robustness run.
+    suffix = "" if dq_threshold == DQ_THRESHOLD else f"_dq{dq_threshold:g}"
+    suffix += "" if apply_state_rule else "_allstates"
+    output_file = Path(OUTPUT_FILE).stem + suffix + ".csv"
+    excluded_file = Path(EXCLUDED_FILE).stem + suffix + ".csv"
+    excluded_state_file = Path(EXCLUDED_STATE_FILE).stem + suffix + ".csv"
+
     sample = select_sample(read_csv("directory", dtype=str, encoding="latin-1"))
 
     parts = {
@@ -303,9 +380,53 @@ def main():
         print("\nWARNING: validation found issues, review before running DEA")
 
     OUT.mkdir(parents=True, exist_ok=True)
-    df.to_csv(OUT / OUTPUT_FILE, index=False)
-    print(f"\nwrote {len(df):,} rows, {len(df.columns)} columns -> {OUT / OUTPUT_FILE}")
+
+    # The validated sample before any exclusion, kept for the data-quality
+    # figures (src/figures.py) and for robustness runs.
+    df.to_csv(OUT / UNSCREENED_FILE, index=False)
+    print(f"\nwrote {len(df):,} rows (before exclusions) -> {OUT / UNSCREENED_FILE}")
+
+    # State comparability rule (see EXCLUDED_STATES). Applied before the
+    # data-quality screen so that the screen's median and MAD are computed
+    # on comparable states only.
+    if apply_state_rule:
+        print(f"\n--- state comparability rule ({', '.join(EXCLUDED_STATES)}) ---")
+        drop = df.state.isin(EXCLUDED_STATES)
+        excluded = df.loc[drop, ["leaid", "district_name", "state"]].copy()
+        excluded["students_per_other_staff"] = (
+            df.loc[drop, "students"] / df.loc[drop, "staff_other_fte"])
+        excluded["reason"] = ("state reports other staff on a different basis "
+                              "(EXCLUDED_STATES)")
+        excluded.to_csv(OUT / excluded_state_file, index=False)
+        print(f"{int(drop.sum()):>7,}  excluded -> {OUT / excluded_state_file}")
+        df = df[~drop]
+        log(len(df), "pass state comparability rule")
+
+    # Data-quality screen: exclude districts with implausible input ratios
+    # and keep them, with the reason, in a separate file.
+    print(f"\n--- data-quality screen (threshold {dq_threshold:g}) ---")
+    dq = data_quality_screen(df, dq_threshold)
+    for name in DQ_RATIOS:
+        n_hit = int((dq[f"z_{name}"].abs() > dq_threshold).sum())
+        print(f"{n_hit:>7,}  flagged by {name}")
+    excluded = pd.concat([df[["leaid", "district_name", "state"]], dq], axis=1)
+    excluded[dq.dq_flag].to_csv(OUT / excluded_file, index=False)
+    print(f"{int(dq.dq_flag.sum()):>7,}  excluded -> {OUT / excluded_file}")
+    df = df[~dq.dq_flag]
+    log(len(df), f"pass data-quality screen (|z| <= {dq_threshold:g})")
+
+    df.to_csv(OUT / output_file, index=False)
+    print(f"\nwrote {len(df):,} rows, {len(df.columns)} columns -> {OUT / output_file}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Build the DEA district dataset.")
+    parser.add_argument("--dq-threshold", type=float, default=DQ_THRESHOLD,
+                        help=f"robust-z cut-off of the data-quality screen "
+                             f"(default {DQ_THRESHOLD:g}; robustness variant "
+                             f"{DQ_THRESHOLD_ROBUSTNESS:g})")
+    parser.add_argument("--keep-states", action="store_true",
+                        help="do not apply the state comparability rule "
+                             f"(keep {', '.join(EXCLUDED_STATES)})")
+    args = parser.parse_args()
+    main(args.dq_threshold, apply_state_rule=not args.keep_states)
